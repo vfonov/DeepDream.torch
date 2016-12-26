@@ -23,7 +23,11 @@ if cuda then
   require 'cunn'
   require 'cudnn'
   
-  cudnn.convert(net, cudnn)
+  cudnn.convert(net, cudnn, function(module)
+            return torch.type(module):find('BatchNormalization') or 
+                   torch.type(module):find('SpatialBatchNormalization') -- backward is not supported in eval mode
+            end)  
+  
   net=net:cuda()
 end
 
