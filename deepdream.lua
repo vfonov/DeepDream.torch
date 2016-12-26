@@ -15,8 +15,10 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 -- load pre-trained model
 local prefix=os.getenv("HOME")..'/'
+
 local m=torch.load(prefix..'nin_bn_final.t7')
 net=m:unpack()
+net:evaluate()
 local Normalization=net.transform
 
 
@@ -38,27 +40,31 @@ function make_step(net, img, clip,step_size, jitter)
     local oy = 0--2*jitter - math.random(jitter)
     img = image.translate(img,ox,oy) -- apply jitter shift
     local dst, g
+    
     if cuda then
         local cuda_img = img:cuda():view(1,img:size(1),img:size(2),img:size(3))
         dst = net:forward(cuda_img)
-        g = net:updateGradInput(cuda_img,dst):float():squeeze()
+        g   = net:updateGradInput(cuda_img,dst):float():squeeze()
     else
         dst = net:forward(img)
-        g = net:updateGradInput(img,dst)
+        g   = net:updateGradInput(img,dst)
     end
     -- apply normalized ascent step to the input image
     img:add(g:mul(step_size/torch.abs(g):mean()))
     
     img = image.translate(img,-ox,-oy) -- apply jitter shift
+    
     if clip then
-        bias = Normalization.mean/Normalization.std
-        img:clamp(-bias,1/Normalization.std-bias)
+      local i
+      for i=1,3 do
+        local bias = Normalization.mean[i]/Normalization.std[i]
+        img[{i,{},{}}]:clamp(-bias,1/Normalization.std[i]-bias)
+      end
     end
     return img
 end
 
 function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, clip, visualize)
-
     local iter_n = iter_n or 10
     local octave_n = octave_n or 4
     local octave_scale = octave_scale or 1.4
@@ -70,21 +76,18 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
     local octaves = {}
     local i
     
-    octaves[octave_n]=base_img
+    octaves[octave_n]=base_img:clone()
     
-    local i
     for i=1,3 do
      octaves[octave_n][{{i},{},{}}]:add(-mean_std.mean[i])
-     octaves[]octave_n[{{i},{},{}}]:div(mean_std.std[i])
+     octaves[octave_n][{{i},{},{}}]:div(mean_std.std[i])
     end
 
-       octaves[octave_n] = torch.add(base_img, -Normalization.mean):div(Normalization.std)
     local _,h,w = unpack(base_img:size():totable())
 
     for i=octave_n-1,1,-1 do
         octaves[i] = image.scale(octaves[i+1], math.ceil((1/octave_scale)*w), math.ceil((1/octave_scale)*h),'simple')
     end
-
 
     local detail
     local src
@@ -107,7 +110,7 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
                     vis = vis:mul(1/vis:max())
                 end
 
-                image.display(vis)
+                -- image.display(vis)
             end
         end
         -- extract details produced on the current octave
@@ -116,7 +119,6 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
     -- returning the resulting image
     src:mul(Normalization.std):add(Normalization.mean)
     return src
-
 end
 
 img = image.load('./sky1024px.jpg')
