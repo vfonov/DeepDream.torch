@@ -105,8 +105,11 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
             src = make_step(net, src, clip)
             if visualize then
                 -- visualization
-                vis = torch.mul(src, Normalization.std):add(Normalization.mean)
-
+                vis=src:clone()
+                for i=1,3 do
+                  vis[{i,{},{}}]:mul(Normalization.std[i]):add(Normalization.mean[i])
+                end
+                
                 if not clip then -- adjust image contrast if clipping is disabled
                     vis = vis:mul(1/vis:max())
                 end
@@ -118,7 +121,9 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
         detail = src-octave_base
     end
     -- returning the resulting image
-    src:mul(Normalization.std):add(Normalization.mean)
+    for i=1,3 do
+      src[{i,{},{}}]:mul(Normalization.std[i]):add(Normalization.mean[i])
+    end
     return src
 end
 
