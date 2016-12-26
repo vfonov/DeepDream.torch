@@ -4,7 +4,7 @@ require 'image'
 local cuda = true
 local n_iter = 100
 local n_ectave = 4
-local n_end_layer = 39
+local n_end_layer = 40
 
 torch.setdefaulttensortype('torch.FloatTensor')
 --net = torch.load('./GoogLeNet.t7')
