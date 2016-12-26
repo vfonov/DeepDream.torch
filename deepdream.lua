@@ -4,7 +4,7 @@ require 'image'
 local cuda = true
 local n_iter = 40
 local n_ectave = 4
-local n_end_layer = nil
+local n_end_layer = 31
 local step_size=0.01
 local clip=false
 local jitter=0
