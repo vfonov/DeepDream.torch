@@ -50,8 +50,8 @@ function make_step(net, img, clip, step_size, jitter)
     local clip = clip
     if clip == nil then clip = true end
 
-    local ox = 0--2*jitter - math.random(jitter)
-    local oy = 0--2*jitter - math.random(jitter)
+    local ox = torch.random(-jitter,jitter)
+    local oy = torch.random(-jitter,jitter)
     img = image.translate(img,ox,oy) -- apply jitter shift
     local dst, g
     
@@ -84,7 +84,9 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
     local octave_n = octave_n or 4
     local octave_scale = octave_scale or 1.4
     local end_layer = end_layer 
-    local net =net
+    local net = net
+    local step_size = 0.01
+    local jitter = 4
     
     if end_layer then
       net = reduceNet(net, end_layer)
@@ -121,7 +123,7 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
             src:add(detail)
         end
         for i=1,iter_n do
-            src = make_step(net, src, clip)
+            src = make_step(net, src, clip, step_size, jitter)
             if visualize then
                 -- visualization
                 vis=src:clone()
