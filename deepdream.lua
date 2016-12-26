@@ -2,11 +2,13 @@ require 'nn'
 require 'image'
 
 local cuda = true
-local n_iter = 10
+local n_iter = 40
 local n_ectave = 4
 local n_end_layer = 40
-local step_size=0.1
+local step_size=0.01
 local clip=false
+local jitter=0
+
 torch.setdefaulttensortype('torch.FloatTensor')
 --net = torch.load('./GoogLeNet.t7')
 --net = torch.load('./OverFeatModel.t7'):float()
@@ -87,7 +89,10 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
     local end_layer = end_layer 
     local net = net
     local step_size = step_size or 0.01
-    local jitter = jitter or 32
+    local jitter = jitter
+    if jitter == nil then
+      jitter=32
+    end
     local visualize=false
     
     
@@ -152,6 +157,6 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
 end
 
 img = image.load('./sky1024px.jpg')
-x = deepdream(net,img,n_iter,n_octave,1.4,n_end_layer,clip,step_size)
+x = deepdream(net,img,n_iter,n_octave,1.4,n_end_layer,clip,step_size,jitter)
 --image.display(x)
 image.save('test.jpg',x)
