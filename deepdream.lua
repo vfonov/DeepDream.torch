@@ -7,11 +7,18 @@ require 'image'
 local cuda = false
 torch.setdefaulttensortype('torch.FloatTensor')
 --net = torch.load('./GoogLeNet.t7')
-net = torch.load('./OverFeatModel.t7'):float()
+--net = torch.load('./OverFeatModel.t7'):float()
 --net:training()
 
 
-local Normalization = {mean = 118.380948/255, std = 61.896913/255}
+--local Normalization = {mean = 118.380948/255, std = 61.896913/255}
+
+-- load pre-trained model
+local prefix=os.getenv("HOME")..'/'
+local m=torch.load(prefix..'nin_bn_final.t7')
+net=m:unpack()
+local Normalization=net.transform
+
 
 function reduceNet(full_net,end_layer)
     local net = nn.Sequential()
@@ -41,8 +48,7 @@ function make_step(net, img, clip,step_size, jitter)
     end
     -- apply normalized ascent step to the input image
     img:add(g:mul(step_size/torch.abs(g):mean()))
-
-
+    
     img = image.translate(img,-ox,-oy) -- apply jitter shift
     if clip then
         bias = Normalization.mean/Normalization.std
@@ -56,13 +62,23 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
     local iter_n = iter_n or 10
     local octave_n = octave_n or 4
     local octave_scale = octave_scale or 1.4
-    local end_layer = end_layer or 20
+    local end_layer = end_layer or 38
     local net = reduceNet(net, end_layer)
     local clip = clip
     if clip == nil then clip = true end
     -- prepare base images for all octaves
     local octaves = {}
-    octaves[octave_n] = torch.add(base_img, -Normalization.mean):div(Normalization.std)
+    local i
+    
+    octaves[octave_n]=base_img
+    
+    local i
+    for i=1,3 do
+     octaves[octave_n][{{i},{},{}}]:add(-mean_std.mean[i])
+     octaves[]octave_n[{{i},{},{}}]:div(mean_std.std[i])
+    end
+
+       octaves[octave_n] = torch.add(base_img, -Normalization.mean):div(Normalization.std)
     local _,h,w = unpack(base_img:size():totable())
 
     for i=octave_n-1,1,-1 do
@@ -105,4 +121,5 @@ end
 
 img = image.load('./sky1024px.jpg')
 x = deepdream(net,img)
-image.display(x)
+--image.display(x)
+image.save('test.jpg')
