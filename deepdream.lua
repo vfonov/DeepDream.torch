@@ -5,7 +5,7 @@ local cuda = true
 local n_iter = 10
 local n_ectave = 4
 local n_end_layer = 40
-local step_size=1
+local step_size=0.1
 torch.setdefaulttensortype('torch.FloatTensor')
 --net = torch.load('./GoogLeNet.t7')
 --net = torch.load('./OverFeatModel.t7'):float()
