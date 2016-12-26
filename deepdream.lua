@@ -6,6 +6,7 @@ local n_iter = 10
 local n_ectave = 4
 local n_end_layer = 40
 local step_size=0.1
+local clip=false
 torch.setdefaulttensortype('torch.FloatTensor')
 --net = torch.load('./GoogLeNet.t7')
 --net = torch.load('./OverFeatModel.t7'):float()
@@ -79,15 +80,16 @@ function make_step(net, img, clip, step_size, jitter)
     return img
 end
 
-function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, clip, step_size)
+function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, clip, step_size, jitter)
     local iter_n = iter_n or 10
     local octave_n = octave_n or 4
     local octave_scale = octave_scale or 1.4
     local end_layer = end_layer 
     local net = net
     local step_size = step_size or 0.01
-    local jitter = 4
+    local jitter = jitter or 32
     local visualize=false
+    
     
     if end_layer then
       net = reduceNet(net, end_layer)
@@ -150,6 +152,6 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
 end
 
 img = image.load('./sky1024px.jpg')
-x = deepdream(net,img,n_iter,n_octave,1.4,n_end_layer,true,step_size)
+x = deepdream(net,img,n_iter,n_octave,1.4,n_end_layer,clip,step_size)
 --image.display(x)
 image.save('test.jpg',x)
