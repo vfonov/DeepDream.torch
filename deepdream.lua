@@ -26,7 +26,7 @@ net=m:unpack()
 
 -- convert last layers to spatial:
 
-model:replace(function(module)
+net:replace(function(module)
    if torch.typename(module) == 'nn.View' then
       return nn.Identity()
    elseif torch.typename(module) == 'nn.Linear' then
