@@ -4,7 +4,7 @@ require 'image'
 local cuda = true
 local n_iter = 40
 local n_ectave = 5
-local n_end_layer = 31
+local n_end_layer = nil
 local step_size=0.01
 local clip=false
 local jitter=4
@@ -23,6 +23,21 @@ local prefix=os.getenv("HOME")..'/'
 local m=torch.load(prefix..'nin_bn_final.t7')
 net=m:unpack()
 
+
+-- convert last layers to spatial:
+
+model:replace(function(module)
+   if torch.typename(module) == 'nn.View' then
+      return nn.Identity()
+   elseif torch.typename(module) == 'nn.Linear' then
+     local m=nn.SpatialConvolution(1024,1000, 1,1)
+     m.weight=module.weight:view(1024,1000,1,1)
+     m.bias=module.bias
+   else
+      return module
+   end
+end)
+
 if cuda then
   require 'cunn'
   require 'cudnn'
@@ -34,6 +49,8 @@ if cuda then
   
   net=net:cuda()
 end
+
+
 
 net:evaluate()
 local Normalization=net.transform
