@@ -79,8 +79,8 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
     octaves[octave_n]=base_img:clone()
     
     for i=1,3 do
-     octaves[octave_n][{{i},{},{}}]:add(-mean_std.mean[i])
-     octaves[octave_n][{{i},{},{}}]:div(mean_std.std[i])
+     octaves[octave_n][{{i},{},{}}]:add(-Normalization.mean[i])
+     octaves[octave_n][{{i},{},{}}]:div(Normalization.std[i])
     end
 
     local _,h,w = unpack(base_img:size():totable())
