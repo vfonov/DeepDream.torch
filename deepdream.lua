@@ -130,4 +130,4 @@ end
 img = image.load('./sky1024px.jpg')
 x = deepdream(net,img)
 --image.display(x)
-image.save('test.jpg')
+image.save('test.jpg',x)
