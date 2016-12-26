@@ -37,7 +37,8 @@ net:replace(function(module)
       return module
    end
 end)
-net:add(nn.Narrow(2,336,1 )) -- searching for squirrel, n02356798
+--net:add(nn.Narrow(2,336,1 )) -- searching for squirrel, n02356798
+net:add(nn.Narrow(2,1,1 ))
 
 if cuda then
   require 'cunn'
