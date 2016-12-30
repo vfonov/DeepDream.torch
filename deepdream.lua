@@ -2,13 +2,13 @@ require 'nn'
 require 'image'
 
 local cuda = true
-local n_iter = 40
-local n_ectave = 5
-local n_end_layer = nil
+local n_iter = 100
+local n_octave = 6
+local n_end_layer = nil  -- max 43 for NiN
 local step_size=0.01
 local clip=false
-local jitter=4
-
+local jitter=30
+local print_frame = false
 torch.setdefaulttensortype('torch.FloatTensor')
 --net = torch.load('./GoogLeNet.t7')
 --net = torch.load('./OverFeatModel.t7'):float()
@@ -16,29 +16,37 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 
 --local Normalization = {mean = 118.380948/255, std = 61.896913/255}
-
+local input_img='test_bicycle.png' -- 'test_moto.jpg'  -- './sky1024px.jpg'
+local output_prefix='bicycle'
 -- load pre-trained model
 local prefix=os.getenv("HOME")..'/'
 
 local m=torch.load(prefix..'nin_bn_final.t7')
 net=m:unpack()
+cls=m.classes
+
 
 
 -- convert last layers to spatial:
+if true then
+    net:replace( function(module)
+    if torch.typename(module) == 'nn.View' then
+        return nn.Identity()
+    elseif torch.typename(module) == 'nn.Linear' then
+        local m  = nn.SpatialConvolution( 1024, 1000, 1, 1)
+        m.weight = module.weight:view(    1000, 1024, 1, 1)
+        m.bias   = module.bias
+        --
+        m.gradWeight = module.gradWeight:view(    1000, 1024, 1, 1)
+        m.gradBias   = module.gradBias
+    else
+        return module
+    end
+    end)
+end
 
-net:replace(function(module)
-   if torch.typename(module) == 'nn.View' then
-      return nn.Identity()
-   elseif torch.typename(module) == 'nn.Linear' then
-     local m=nn.SpatialConvolution(1024,1000, 1,1)
-     m.weight=module.weight:view(1024,1000,1,1)
-     m.bias=module.bias
-   else
-      return module
-   end
-end)
 --net:add(nn.Narrow(2,336,1 )) -- searching for squirrel, n02356798
-net:add(nn.Narrow(2,2,1 ))
+net:add(nn.Narrow(2,336,1 ))
 
 print(net)
 
@@ -46,25 +54,29 @@ if cuda then
   require 'cunn'
   require 'cudnn'
   
-  cudnn.convert(net, cudnn, function(module)
-            return torch.type(module):find('BatchNormalization') or 
-                   torch.type(module):find('SpatialBatchNormalization') -- backward is not supported in eval mode
-            end)  
+--   cudnn.convert(net, cudnn, function(module)
+--             return torch.type(module):find('BatchNormalization') or 
+--                    torch.type(module):find('SpatialBatchNormalization') -- backward is not supported in eval mode
+--             end)  
+
+  cudnn.convert(net, cudnn)  
   
   net=net:cuda()
 end
 
-
-
-net:evaluate()
+--net:evaluate()
 local Normalization=net.transform
 
-
-function reduceNet(full_net,end_layer)
+function reduceNet(full_net, end_layer)
     local net = nn.Sequential()
+    if end_layer>=#full_net then
+      return full_net
+    end
     for l=1,end_layer do
         net:add(full_net:get(l))
     end
+    --net:evaluate()
+    net:training()
     return net
 end
 
@@ -177,7 +189,19 @@ function deepdream(net, base_img, iter_n, octave_n, octave_scale, end_layer, cli
     return src
 end
 
-img = image.load('./sky1024px.jpg')
-x = deepdream(net,img,n_iter,n_octave,1.4,n_end_layer,clip,step_size,jitter)
---image.display(x)
-image.save('test.jpg',x)
+pad   = nn.SpatialReflectionPadding( jitter*2, jitter*2, jitter*2, jitter*2)
+unpad = nn.SpatialZeroPadding(      -jitter*2,-jitter*2,-jitter*2,-jitter*2)
+
+local i
+for i=2,42 do
+  --
+  img = image.load(input_img)
+  --
+  x = unpad:forward(deepdream(net,pad:forward(img),n_iter,n_octave,1.4,i,clip,step_size,jitter))
+  --image.display(x)
+  if print_frame then
+    image.drawText(x, string.format("%02d",i) , 10, 10,{inplace=true,color = {0, 255, 0},size=3}) -- display how many layers we have
+  end
+  image.save(string.format('%s_%02d.jpg',output_prefix,i),x)
+  print(i)
+end
